@@ -147,5 +147,5 @@ class UnitChange(Operation):
             sent = ""
         return sent
 
-    def generate(self, text):
+    def generate(self, text, **kwargs):
         return self.change(text, negative=False)
