@@ -6,7 +6,7 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 from .operation import Operation
 
 
-class UnitChange(Operation):
+class ReplaceUnits(Operation):
     def __init__(self):
         currencies = ["dollar", "cent", "nickel", "penny", "quarter", "dime", "rupee", "paisa", "pound", "euro"]
         currency_abbrv = {}
