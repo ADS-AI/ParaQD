@@ -2,7 +2,7 @@ from .positive_ops import PositiveSamples
 from .negative_ops import NegativeSamples
 
 
-class GenerateData(object):
+class DataGenerator(object):
     def __init__(self):
         self.positive_generator = PositiveSamples()
         self.negative_generator = NegativeSamples()
