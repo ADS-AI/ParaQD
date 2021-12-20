@@ -11,3 +11,6 @@ from .unit_expansion import UnitExpansion
 from .most_important_phrase_remover import MostImportantPhraseRemover
 from .negate_question import NegateQuestion
 from .pegasus import Pegasus
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
