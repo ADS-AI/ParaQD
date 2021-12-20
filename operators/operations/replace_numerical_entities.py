@@ -13,7 +13,7 @@ class ReplaceNumericalEntities(Operation):
         replacement = np.random.choice(possibilities)
         text = wordtodigits.convert(text)
         numbers = list(set(re.findall("\d+\.?\d*", text)))
-        numbers = np.random.choice(numbers, np.random.randint(1, 3), replace=False)
+        numbers = np.random.choice(numbers, np.random.randint(1, min(len(numbers)+1, 3)), replace=False)
         for number in numbers:
             text = re.sub(number, " "+replacement+" ", text)
         text = re.sub("\s+", " ", text)
