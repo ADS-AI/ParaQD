@@ -6,7 +6,8 @@ class RandomDeletion(Operation):
     def __init__(self) -> None:
         super().__init__()
 
-    def generate(self, text, soften=False, **kwargs):
+    def generate(self, text, **kwargs):
+        soften = kwargs.get("soften", False)
         words = text.split()
         num = np.random.randint(1, max(4, len(words)//10))
         if soften:
