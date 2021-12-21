@@ -65,9 +65,5 @@ class BackTranslate(Operation):
         paraphrase = sorted(paraphrased, key=lambda x: x[1], reverse=True)[0]
         return paraphrase[0]
 
-    def generate(self, texts, **kwargs):
-        paraphrases = []
-        for text in texts:
-            paraphrase = self.backtranslate_single(text)
-            paraphrases.append(paraphrase)
-        return paraphrases
+    def generate(self, text, **kwargs):
+        return self.backtranslate_single(text)
