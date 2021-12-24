@@ -102,7 +102,7 @@ Add additional notes about how to deploy this on a live system.
 
 ## ✍️ Authors <a name = "authors"></a>
 
-- [@rg089](https://github.com/rg089)
+- Rishabh Gupta: [@rg089](https://github.com/rg089)
 
 See also the list of [contributors](https://github.com/rg089/ParaQD) who participated in this project.
 
