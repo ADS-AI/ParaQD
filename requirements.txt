@@ -1,0 +1,10 @@
+sentence_transformers
+transformers 
+sentencepiece 
+sentence-splitter 
+strsim 
+num2words
+stemming 
+quantulum3 
+scikit-learn==0.24.2 
+inflect
