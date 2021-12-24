@@ -10,3 +10,7 @@ stemming
 wordtodigits
 scikit-learn==0.24.2 
 inflect
+numpy
+pandas
+matplotlib
+seaborn
