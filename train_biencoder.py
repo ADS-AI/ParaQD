@@ -49,7 +49,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
             negatives = [row[col] for col in negative_cols_chosen]
 
         for positive, negative in zip(positives, negatives):
-            train_samples.append(InputExample(anchor_text, positive, negative))
+            train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
 
     return train_samples
     
