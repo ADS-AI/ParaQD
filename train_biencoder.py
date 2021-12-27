@@ -5,6 +5,22 @@ import random
 import pandas as pd
 
     
+def replace_nans(texts, original):
+    """
+    replaces the nans in the texts with other random texts
+    :param texts: the texts
+
+    :return: the replaced texts
+    """
+    n = len(texts)
+    texts = [text for text in texts if str(text) != 'nan' and text != '']
+    if len(texts) == 0: 
+        return [original for i in range(n)]
+    if len(texts) < n:
+        texts = random.choices(texts, k=n)
+    return texts
+
+
 def generate_samples(df, anchor_column="question", positive_cols=[], negative_cols=[], use_inbatch=False, max_triplets_per_sample=-1):
     """
     generates the triplets from the dataframe
@@ -35,6 +51,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
         else:
             positive_cols_chosen = random.choices(positive_cols, k=num_triplets_per_sample)
         positives = [row[col] for col in positive_cols_chosen]
+        positives = replace_nans(positives, anchor_text)
 
         # generate the negative samples
         if use_inbatch:
@@ -47,6 +64,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
             else:
                 negative_cols_chosen = random.choices(negative_cols, k=num_triplets_per_sample)
             negatives = [row[col] for col in negative_cols_chosen]
+            negatives = replace_nans(negatives, " ".join(anchor_text.split()[:-5]))
 
         for positive, negative in zip(positives, negatives):
             train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
