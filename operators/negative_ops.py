@@ -13,7 +13,6 @@ class NegativeSamples(CombinedOperation):
             "ReplaceNumericalEntities": ReplaceNumericalEntities(),
             "Pegasus": Pegasus(),
             "ReplaceUnits": ReplaceUnits(),
-            "NegateQuestion": NegateQuestion(),
         }
         self.backup = TF_IDF_Replacement()
 
@@ -33,7 +32,7 @@ class NegativeSamples(CombinedOperation):
         return text
 
     def generate(self, text, ops=["MostImportantPhraseRemover", "DeleteLastSentence", "ReplaceNamedEntities",
-                                  "ReplaceNumericalEntities", "Pegasus", "ReplaceUnits", "NegateQuestion"], 
+                                  "ReplaceNumericalEntities", "Pegasus", "ReplaceUnits"], 
                                   **kwargs):
         negatives = []
         for op in ops:
