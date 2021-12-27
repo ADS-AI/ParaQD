@@ -9,7 +9,7 @@ class DataGenerator(object):
 
     def generate(self, text, positive_ops=["BackTranslate", "SameSentence", "Num2Words", "UnitExpansion"], 
                 negative_ops=["MostImportantPhraseRemover", "DeleteLastSentence", "ReplaceNamedEntities",
-                            "ReplaceNumericalEntities", "Pegasus", "ReplaceUnits", "NegateQuestion"]):
+                            "ReplaceNumericalEntities", "Pegasus", "ReplaceUnits"]):
         positives = self.positive_generator.generate(text, ops=positive_ops)
         negatives = self.negative_generator.generate(text, ops=negative_ops)
         return positives, negatives
