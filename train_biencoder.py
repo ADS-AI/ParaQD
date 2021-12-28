@@ -4,6 +4,16 @@ from torch.utils.data import DataLoader
 import random
 import pandas as pd
 import os
+import numpy as np
+import random
+import torch
+
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 
     
 def replace_nans(texts, original):
@@ -124,6 +134,7 @@ def train(train_samples, val_samples, model_path='sentence-transformers/paraphra
 
 
 if __name__ == '__main__':
+    set_seed(3407)
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--train_path", "-t", type=str, default="data/train.csv", help="path to the training data")
