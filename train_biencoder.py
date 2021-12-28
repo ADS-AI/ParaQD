@@ -3,6 +3,7 @@ from sentence_transformers import SentenceTransformer, InputExample, losses, eva
 from torch.utils.data import DataLoader
 import random
 import pandas as pd
+import os
 
     
 def replace_nans(texts, original):
@@ -73,7 +74,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
     
 
 def train(train_samples, val_samples, model_path='sentence-transformers/paraphrase-mpnet-base-v2', num_epochs=10, 
-        batch_size=16, output_dir='output', verbose=True):
+        batch_size=16, output_dir='output', verbose=True, save_loss=False):
     """
     train the biencoder
     :param train_samples: the training samples
@@ -112,6 +113,8 @@ def train(train_samples, val_samples, model_path='sentence-transformers/paraphra
         print(f"[INFO] Saving model to {output_dir}")
 
     model.save(output_dir)
+    if save_loss:
+        train_loss.save(os.path.join(output_dir, 'loss'))
 
 
 if __name__ == '__main__':
@@ -130,6 +133,7 @@ if __name__ == '__main__':
     parser.add_argument("--use_inbatch", "-u", action="store_true", help="if true, the samples are generated in batches, otherwise, \
         they are present in the negative_cols")
     parser.add_argument("--max_triplets_per_sample", "-mt", type=int, default=-1, help="the maximum number of triplets per sample")
+    parser.add_argument("--save_loss", "-sl", action="store_true", help="if true, the loss is saved")
 
     args = parser.parse_args()
 
