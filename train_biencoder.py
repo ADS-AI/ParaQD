@@ -74,7 +74,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
     
 
 def train(train_samples, val_samples, model_path='sentence-transformers/paraphrase-mpnet-base-v2', num_epochs=10, 
-        batch_size=16, output_dir='output', verbose=True, save_loss=False):
+        batch_size=16, output_dir='output', verbose=True, save_loss=False, loss_fn="triplet"):
     """
     train the biencoder
     :param train_samples: the training samples
@@ -99,7 +99,13 @@ def train(train_samples, val_samples, model_path='sentence-transformers/paraphra
     evaluator = evaluation.TripletEvaluator.from_input_examples(val_samples)
 
     warmup_steps = int(len(train_dataloader) * num_epochs * 0.1)
-    train_loss = losses.TripletLoss(model=model)
+
+    if loss_fn == "triplet":
+        train_loss = losses.TripletLoss(model=model)
+    elif loss_fn == "mnrl":
+        train_loss = losses.MultipleNegativesRankingLoss(model=model)
+    else:
+        raise NotImplementedError
 
     if verbose:
         print(f"[INFO] Training for {num_epochs} epochs")
@@ -134,6 +140,7 @@ if __name__ == '__main__':
         they are present in the negative_cols")
     parser.add_argument("--max_triplets_per_sample", "-mt", type=int, default=-1, help="the maximum number of triplets per sample")
     parser.add_argument("--save_loss", "-sl", action="store_true", help="if true, the loss is saved")
+    parser.add_argument("--loss_fn", "-lf", type=str, default="triplet", help="the loss function to use")
 
     args = parser.parse_args()
 
@@ -149,7 +156,7 @@ if __name__ == '__main__':
                                     max_triplets_per_sample=args.max_triplets_per_sample)
 
     model = train(train_samples=train_samples, val_samples=val_samples, model_path=args.model_path, num_epochs=args.num_epochs,
-                batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose)
+                batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose, save_loss=args.save_loss, loss_fn=args.loss_fn)
 
     """
     To train the model, run the following command:
