@@ -7,6 +7,7 @@ import os
 import numpy as np
 import random
 import torch
+import copy
 
 def set_seed(seed):
     random.seed(seed)
@@ -58,7 +59,9 @@ def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="a
         if len(positives) >= max_triplets_per_sample:
             positives = random.sample(positives, max_triplets_per_sample)
         else:
-            positives.extend(random.choices([anchor_text], k =(max_triplets_per_sample - len(positives))))
+            pos_copy = copy.deepcopy(positives)
+            pos_copy.append(anchor_text)
+            positives.extend(random.choices(pos_copy, k =(max_triplets_per_sample - len(positives))))
         positives = replace_nans(positives, anchor_text)
         for positive, negative in zip(positives, negatives):
             train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
