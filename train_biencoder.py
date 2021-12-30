@@ -8,13 +8,11 @@ import numpy as np
 import random
 import torch
 
-
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-
     
 def replace_nans(texts, original):
     """
@@ -31,8 +29,45 @@ def replace_nans(texts, original):
         texts = random.choices(texts, k=n)
     return texts
 
+def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="aug", max_triplets_per_sample=-1):
+    """
+    detects positive and negative columns for each sample and generates triplets
+    :param df: the dataframe
+    :param anchor_column: the column name of the anchor column
+    :param max_triplets_per_sample: the maximum number of triplets per sample
+    """
+    train_samples = []
+    max_triplets_per_sample = len(cols)
+    for index, row in df.iterrows():
+        anchor_text = row[anchor_column]
+        positives, negatives = [], []
+        for i in range(len(cols)):
+            col_pref = col_prefix.split("_")[0]
+            if row[col_pref+"_label_"+str(i+1)] == 1:
+                positives.append(row[col_prefix+str(i+1)])
+            else:
+                negatives.append(row[col_prefix+str(i+1)])
+        negative_idxs_list = list(df.index.difference([index]))
 
-def generate_samples(df, anchor_column="question", positive_cols=[], negative_cols=[], use_inbatch=False, max_triplets_per_sample=-1):
+        if len(negatives) >= max_triplets_per_sample:
+            negatives = random.sample(negatives, max_triplets_per_sample)
+        else:
+            negative_idxs = random.sample(negative_idxs_list, (max_triplets_per_sample - len(negatives)))
+            negatives.extend([df.loc[idx, anchor_column] for idx in negative_idxs])
+        negatives = replace_nans(negatives, " ".join(anchor_text.split()[:-5]))
+        if len(positives) >= max_triplets_per_sample:
+            positives = random.sample(positives, max_triplets_per_sample)
+        else:
+            positives.extend(random.choices([anchor_text], k =(max_triplets_per_sample - len(positives))))
+        positives = replace_nans(positives, anchor_text)
+        for positive, negative in zip(positives, negatives):
+            train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
+    return train_samples
+
+
+
+
+def generate_samples(df, anchor_column="question", positive_cols=[], cols=[], negative_cols=[], use_inbatch=False, max_triplets_per_sample=-1, detect_cols=False, col_prefix="aug"):
     """
     generates the triplets from the dataframe
     :param df: the dataframe
@@ -44,6 +79,10 @@ def generate_samples(df, anchor_column="question", positive_cols=[], negative_co
 
     :return: a list of the triplets
     """
+    if detect_cols and len(positive_cols) == 0 and len(negative_cols) == 0:
+        train_samples = get_positives_negatives(df, anchor_column, cols, col_prefix)
+        return train_samples
+
     if not use_inbatch and len(negative_cols) == 0: raise ValueError("if use_inbatch is false, negative_cols must be specified")
     if use_inbatch and len(negative_cols) > 0: raise ValueError("if use_inbatch is true, negative_cols must not be specified")
 
@@ -146,25 +185,27 @@ if __name__ == '__main__':
     parser.add_argument("--verbose", "-vb", action="store_true", help="if true, the training is printed")
     parser.add_argument("--anchor_column", "-a", type=str, default="question", help="the column name of the anchor column")
     parser.add_argument("--positive_cols", "-p", type=str, nargs='+', default=[], help="the columns that are used to generate the positive samples")
+    parser.add_argument("--cols", "-col", type=str, nargs='+', default=[], help="the columns that contain all augmentations with no demarcation fo positive or negatives")
     parser.add_argument("--negative_cols", "-n", type=str, nargs='*', default=[], help="the columns that are used to generate the negative samples")
     parser.add_argument("--use_inbatch", "-u", action="store_true", help="if true, the samples are generated in batches, otherwise, \
         they are present in the negative_cols")
     parser.add_argument("--max_triplets_per_sample", "-mt", type=int, default=-1, help="the maximum number of triplets per sample")
     parser.add_argument("--save_loss", "-sl", action="store_true", help="if true, the loss is saved")
     parser.add_argument("--loss_fn", "-lf", type=str, default="triplet", help="the loss function to use")
-
+    parser.add_argument("--detect_cols", "-dc",action="store_true" , help="detect positive and negative columns based on soft labels provided")
+    parser.add_argument("--col_prefix", "-cp", type=str, default="aug", help="column names prefix for the dataset provided")
     args = parser.parse_args()
 
     train_df = pd.read_csv(args.train_path)
     val_df = pd.read_csv(args.val_path)
 
-    train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
+    train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, cols=args.cols,
                                     negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
-                                    max_triplets_per_sample=args.max_triplets_per_sample)
+                                    max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, col_prefix = args.col_prefix)
 
-    val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols,
+    val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, cols=args.cols,
                                     negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
-                                    max_triplets_per_sample=args.max_triplets_per_sample)
+                                    max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, col_prefix = args.col_prefix)
 
     model = train(train_samples=train_samples, val_samples=val_samples, model_path=args.model_path, num_epochs=args.num_epochs,
                 batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose, save_loss=args.save_loss, loss_fn=args.loss_fn)
