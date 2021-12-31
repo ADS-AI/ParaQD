@@ -134,13 +134,20 @@ def train_with_seed(seed, train_samples, val_samples, model_path='sentence-trans
     Trains for one epoch with stop_after fraction of the training data for a given seed
     """
     set_seed(seed)
+    if verbose:
+        print(f"Training with seed: {seed}")
+        print(f"[INFO] Training Set Size: {len(train_samples)}")
+        print(f"[INFO] Validation Set Size: {len(val_samples)}")
 
     model = SentenceTransformer(model_path)
     train_dataset = DataLoader(train_samples, batch_size=batch_size, shuffle=True)
     evaluator = evaluation.TripletEvaluator.from_input_examples(val_samples)
 
     warmup_steps = int(len(train_dataset) * num_epochs * 0.1)
-    steps_per_epoch = math.ceil( len(train_dataset) / batch_size * stop_after)
+    steps_per_epoch = math.ceil(len(train_samples) / batch_size * stop_after)
+
+    if verbose:
+        print(f"[INFO] Training for {num_epochs} epoch(s), {warmup_steps} warmup steps, {steps_per_epoch} steps per epoch")
 
     if loss_fn == "triplet":
         train_loss = losses.TripletLoss(model=model)
@@ -154,7 +161,7 @@ def train_with_seed(seed, train_samples, val_samples, model_path='sentence-trans
     model.fit(train_objectives=[(train_dataset, train_loss)],
         evaluator=evaluator,
         epochs=num_epochs,
-        evaluation_steps=150,
+        evaluation_steps=100,
         steps_per_epoch=steps_per_epoch,
         warmup_steps=warmup_steps,
         output_path=model_save_path)
@@ -266,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument("--loss_fn", "-lf", type=str, default="triplet", help="the loss function to use")
     parser.add_argument("--seed", "-s", type=int, default=-1, help="the random seed")
     parser.add_argument("--num_seeds", "-ns", type=int, default=-1, help="the number of seeds")
-    parser.add_argument("--stop_after", "-sa", type=int, default=0.2, help="the amount of batches to stop after")
+    parser.add_argument("--stop_after", "-sa", type=float, default=0.2, help="the amount of batches to stop after")
     parser.add_argument("--continue_training", "-ct", action="store_true", help="if true, the training with best seed is continued")
     parser.add_argument("--detect_cols", "-dc",action="store_true" , help="detect positive and negative columns based on soft labels provided")
     parser.add_argument("--col_prefix", "-cp", type=str, default="aug", help="column names prefix for the dataset provided")
@@ -290,23 +297,27 @@ if __name__ == '__main__':
 
         train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
                                         negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
-                                        max_triplets_per_sample=args.max_triplets_per_sample)
+                                        max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
+                                        col_prefix = args.col_prefix)
 
         val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols,
                                         negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
-                                        max_triplets_per_sample=args.max_triplets_per_sample)
+                                        max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
+                                        col_prefix = args.col_prefix)
 
         model = train_with_seed(seed=seed, train_samples=train_samples, val_samples=val_samples, model_path=args.model_path, num_epochs=1,
                     batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose, save_loss=args.save_loss, 
                     loss_fn=args.loss_fn, stop_after=args.stop_after)
 
     best_seed = get_best_seed(output_dir=args.output_dir)
+    print(f"[INFO] Best seed is {best_seed}!")
     with open(os.path.join(args.output_dir, 'best_seed.json'), 'w') as f:
         info = {'best_seed': best_seed}
         json.dump(info, f)
 
     if args.continue_training:
         set_seed(best_seed)
+
         train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
                                             negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
                                             max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
@@ -323,5 +334,5 @@ if __name__ == '__main__':
 
     """
     To train the model, run the following command:
-    python train_biencoder.py -t data/train.csv -v data/val.csv -a question -p aug1 aug2 aug3 -n aug4 aug5 aug6 -ne 10 -b 16 -o output
+    python train_biencoder.py -t data/train.csv -v data/val.csv -ns 5 -sa 0.2 -ct -a question -p aug1 aug2 aug3 -n aug4 aug5 aug6 -ne 10 -b 16 -o output
     """
