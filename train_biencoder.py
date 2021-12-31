@@ -17,7 +17,8 @@ def set_seed(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    
+
+
 def replace_nans(texts, original):
     """
     replaces the nans in the texts with other random texts
@@ -32,6 +33,7 @@ def replace_nans(texts, original):
     if len(texts) < n:
         texts = random.choices(texts, k=n)
     return texts
+
 
 def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="aug", max_triplets_per_sample=-1):
     """
@@ -69,8 +71,6 @@ def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="a
         for positive, negative in zip(positives, negatives):
             train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
     return train_samples
-
-
 
 
 def generate_samples(df, anchor_column="question", positive_cols=[], cols=[], negative_cols=[], use_inbatch=False, max_triplets_per_sample=-1, detect_cols=False, col_prefix="aug"):
