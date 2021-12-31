@@ -37,7 +37,7 @@ def replace_nans(texts, original):
 
 def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="aug", max_triplets_per_sample=-1):
     """
-    detects positive and negative columns for each sample and generates triplets
+    useful when pseudo labelling is present, detects positive and negative columns for each sample and generates triplets
     :param df: the dataframe
     :param anchor_column: the column name of the anchor column
     :param max_triplets_per_sample: the maximum number of triplets per sample
@@ -179,7 +179,7 @@ def read_eval_file(eval_path):
     eval_df = pd.read_csv(os.path.join(eval_path, eval_file))
     cosine_accuracies = eval_df["accuracy_cosinus"].values
     # Take the mean of the last three values of the Series
-    cosine_acc = np.mean(cosine_accuracies[-3:])
+    cosine_acc = np.mean(cosine_accuracies[-4:-1])
     return cosine_acc
 
 
@@ -193,14 +193,16 @@ def get_best_seed(model_dir):
     eval_paths = [os.path.join(model_path, "eval") for model_path in model_paths]
 
     best_seed = -1; cosine_acc = -1
+    results = {}
     for seed, eval_path in zip(seeds, eval_paths):
         cosine_results = read_eval_file(eval_path)
+        results[str(seed)] = cosine_results # seed is a string to save in the json file
 
         if cosine_results > cosine_acc:
             best_seed = seed
             cosine_acc = cosine_results
     
-    return best_seed
+    return best_seed, results
 
 
 def train(train_samples, val_samples, model_path='sentence-transformers/paraphrase-mpnet-base-v2', num_epochs=10, 
@@ -292,31 +294,38 @@ if __name__ == '__main__':
     train_df = pd.read_csv(args.train_path)
     val_df = pd.read_csv(args.val_path)
 
-    for seed in seed_list:
-        set_seed(seed)
+    if len(seed_list) > 1:
+        for seed in seed_list:
+            set_seed(seed)
 
-        train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
-                                        negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
-                                        max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
-                                        col_prefix = args.col_prefix)
+            train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
+                                            negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
+                                            max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
+                                            col_prefix = args.col_prefix)
 
-        val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols,
-                                        negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
-                                        max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
-                                        col_prefix = args.col_prefix)
+            val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols,
+                                            negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
+                                            max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
+                                            col_prefix = args.col_prefix)
 
-        model = train_with_seed(seed=seed, train_samples=train_samples, val_samples=val_samples, model_path=args.model_path, num_epochs=1,
-                    batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose, save_loss=args.save_loss, 
-                    loss_fn=args.loss_fn, stop_after=args.stop_after)
+            model = train_with_seed(seed=seed, train_samples=train_samples, val_samples=val_samples, model_path=args.model_path, num_epochs=1,
+                        batch_size=args.batch_size, output_dir=args.output_dir, verbose=args.verbose, save_loss=args.save_loss, 
+                        loss_fn=args.loss_fn, stop_after=args.stop_after)
 
-    best_seed = get_best_seed(output_dir=args.output_dir)
-    print(f"[INFO] Best seed is {best_seed}!")
-    with open(os.path.join(args.output_dir, 'best_seed.json'), 'w') as f:
-        info = {'best_seed': best_seed}
-        json.dump(info, f)
+        best_seed, results = get_best_seed(model_dir=args.output_dir)
+        print(f"[INFO] Best seed is {best_seed}!")
 
-    if args.continue_training:
+        with open(os.path.join(args.output_dir, 'best_seed.json'), 'w') as f:
+            info = {'best_seed': best_seed, "results": results}
+            json.dump(info, f)
+
+    else:
+        best_seed = seed_list[0]
+
+    if args.continue_training or len(seed_list) == 1:
         set_seed(best_seed)
+        if args.verbose:
+            print(f"[INFO] Training with seed: {best_seed}")
 
         train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
                                             negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
