@@ -95,7 +95,7 @@ def generate_samples(df, anchor_column="question", positive_cols=[], cols=[], ne
     train_samples = []
     num_triplets_per_sample = max(len(positive_cols), len(negative_cols))
     # if max_triplets_per_sample is specified, we limit the number of triplets per sample
-    if max_triplets_per_sample > 0: num_triplets_per_sample = min(num_triplets_per_sample, max_triplets_per_sample) 
+    if max_triplets_per_sample > 0: num_triplets_per_sample = max_triplets_per_sample
 
     for idx, row in df.iterrows():
         anchor_text = row[anchor_column]
