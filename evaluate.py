@@ -113,13 +113,6 @@ class Metrics():
         preds = list(df[column].apply(lambda x: 1 if x>thresh else 0).values)
         true = list(df['label'].values)
 
-        # Calculating the mean difference
-        pos_mean = df[df["label"]==1][column].mean()
-        neg_mean = df[df["label"]==0][column].mean()
-        diff = pos_mean - neg_mean
-        metrics["pos_mean"] = pos_mean; metrics["neg_mean"] = neg_mean
-        metrics["mean_difference"] = diff
-
         # Calculating the macro metrics
         macro_precision, macro_recall, macro_f1 = Metrics.get_macro_metrics(preds, true)
         metrics["macro_precision"] = macro_precision; metrics["macro_recall"] = macro_recall
@@ -129,6 +122,13 @@ class Metrics():
         weighted_precision, weighted_recall, weighted_f1 = Metrics.get_weighted_metrics(preds, true)
         metrics["weighted_precision"] = weighted_precision; metrics["weighted_recall"] = weighted_recall
         metrics["weighted_f1"] = weighted_f1
+
+        # Calculating the mean difference
+        pos_mean = df[df["label"]==1][column].mean()
+        neg_mean = df[df["label"]==0][column].mean()
+        diff = pos_mean - neg_mean
+        metrics["mean_difference"] = diff
+        metrics["pos_mean"] = pos_mean; metrics["neg_mean"] = neg_mean
 
         return metrics
 
@@ -177,11 +177,23 @@ class Evaluator():
                                             x[self.column_1], x[self.column_2]), axis=1)
 
 
+    def __round_metrics(self, metrics):
+        """
+        rounds all the numbers to 3 decimal places
+        """
+        for key in metrics:
+            if type(metrics[key]) == float:
+                metrics[key] = float(np.round(metrics[key], 3))
+
+        return metrics
+        
+
     def get_metrics(self):
         self.__get_score()
 
         if self.verbose: print("[INFO] Computing metrics...")
         metrics = Metrics.compute(self.data, self.method, self.threshold)
+        metrics = self.__round_metrics(metrics)
         metrics["method"] = self.method
         metrics["threshold"] = self.threshold
         return metrics
@@ -250,7 +262,7 @@ if __name__ == "__main__":
                         help="Name of the column containing the first sentence.")
     parser.add_argument("--column_2", "-c2", type=str, default="paraphrase",
                         help="Name of the column containing the second sentence.")
-    parser.add_argument("--verbose", "-v", type=bool, default=False,
+    parser.add_argument("--verbose", "-v", action="store_true",
                         help="Whether to print the progress.")
     parser.add_argument("--threshold", "-t", type=float, default=0.5,
                         help="Threshold to use for the evaluation.")
