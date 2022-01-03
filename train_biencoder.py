@@ -43,7 +43,7 @@ def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="a
     :param max_triplets_per_sample: the maximum number of triplets per sample
     """
     train_samples = []
-    max_triplets_per_sample = len(cols)
+    # max_triplets_per_sample = len(cols)
     for index, row in df.iterrows():
         anchor_text = row[anchor_column]
         positives, negatives = [], []
@@ -54,7 +54,7 @@ def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="a
             else:
                 negatives.append(row[col_prefix+str(i+1)])
         negative_idxs_list = list(df.index.difference([index]))
-
+        max_triplets_per_sample = max(len(positives),len(negatives))
         if len(negatives) >= max_triplets_per_sample:
             negatives = random.sample(negatives, max_triplets_per_sample)
         else:
@@ -69,6 +69,7 @@ def get_positives_negatives(df, anchor_column="question", cols=[], col_prefix="a
             positives.extend(random.choices(pos_copy, k =(max_triplets_per_sample - len(positives))))
         positives = replace_nans(positives, anchor_text)
         for positive, negative in zip(positives, negatives):
+            # print("here", train_samples)
             train_samples.append(InputExample(texts = [anchor_text, positive, negative]))
     return train_samples
 
@@ -328,12 +329,12 @@ if __name__ == '__main__':
             print(f"[INFO] Training with seed: {best_seed}")
 
         train_samples = generate_samples(df=train_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols, 
-                                            negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
+                                            cols=args.cols ,negative_cols=args.negative_cols, use_inbatch=args.use_inbatch, 
                                             max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
                                             col_prefix = args.col_prefix)
 
         val_samples = generate_samples(df=val_df, anchor_column=args.anchor_column, positive_cols=args.positive_cols,
-                                            negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
+                                            cols=args.cols ,negative_cols=args.negative_cols, use_inbatch=args.use_inbatch,
                                             max_triplets_per_sample=args.max_triplets_per_sample, detect_cols = args.detect_cols, 
                                             col_prefix = args.col_prefix)
 
