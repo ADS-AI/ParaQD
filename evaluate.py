@@ -182,11 +182,10 @@ class Evaluator():
         rounds all the numbers to 3 decimal places
         """
         for key in metrics:
-            if type(metrics[key]) == float:
-                metrics[key] = float(np.round(metrics[key], 3))
+            metrics[key] = round(metrics[key], 3)
 
         return metrics
-        
+
 
     def get_metrics(self):
         self.__get_score()
