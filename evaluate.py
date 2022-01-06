@@ -4,6 +4,8 @@ from scipy.spatial.distance import cdist
 from sentence_transformers import SentenceTransformer
 import os, json
 import argparse
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class Metrics():
@@ -11,8 +13,8 @@ class Metrics():
     @staticmethod
     def get_confusion_matrix(predicted, actual):
         conf_matrix = np.zeros((2, 2))
-        for pred,act in zip(predicted,actual):
-            conf_matrix[act,pred]+=1
+        for pred,act in zip(predicted, actual):
+            conf_matrix[act, pred] += 1
         return conf_matrix
 
 
@@ -113,6 +115,9 @@ class Metrics():
         preds = list(df[column].apply(lambda x: 1 if x>thresh else 0).values)
         true = list(df['label'].values)
 
+        # Confusion matrix
+        conf_matrix = Metrics.get_confusion_matrix(preds, true)
+
         # Calculating the macro metrics
         macro_precision, macro_recall, macro_f1 = Metrics.get_macro_metrics(preds, true)
         metrics["macro_precision"] = macro_precision; metrics["macro_recall"] = macro_recall
@@ -130,7 +135,7 @@ class Metrics():
         metrics["mean_difference"] = diff
         metrics["pos_mean"] = pos_mean; metrics["neg_mean"] = neg_mean
 
-        return metrics
+        return metrics, conf_matrix
 
 
 class Evaluator():
@@ -157,6 +162,7 @@ class Evaluator():
         self.model = SentenceTransformer(model_path)
         self.threshold = 0.5
         if "threshold" in kwargs: self.threshold = kwargs["threshold"]
+        self.dataset_name = kwargs.get("dataset_name", "unknown")
 
 
     def __score_biencoder(self, sentence_1, sentence_2):
@@ -191,17 +197,38 @@ class Evaluator():
         self.__get_score()
 
         if self.verbose: print("[INFO] Computing metrics...")
-        metrics = Metrics.compute(self.data, self.method, self.threshold)
+        metrics, conf_matrix = Metrics.compute(self.data, self.method, self.threshold)
         metrics = self.__round_metrics(metrics)
         metrics["method"] = self.method
         metrics["threshold"] = self.threshold
-        return metrics
+        return metrics, conf_matrix
+
+    
+    def __save_conf_matrix(self, conf_matrix):
+        """
+        Saves the confusion matrix in a csv file.
+        """
+        if self.verbose: print("[INFO] Saving the confusion matrix...")
+        ax = sns.heatmap(conf_matrix/np.sum(conf_matrix), annot=True, fmt=".2f")
+
+        ax.set_title(f'{self.method}');
+        ax.set_xlabel('Predicted Values')
+        ax.set_ylabel('Actual Values');
+
+        ## Ticket labels - List must be in alphabetical order
+        ax.xaxis.set_ticklabels(['Invalid','Valid'])
+        ax.yaxis.set_ticklabels(['Invalid','Valid'])
+
+        directory = os.path.dirname(self.out_path)
+        out_path = os.path.join(directory, f"{self.method}_{self.dataset_name}.png")
+        plt.savefig(out_path)
 
 
     def __write_metrics_json(self):
         info = []
 
-        metrics = self.get_metrics()
+        metrics, conf_matrix = self.get_metrics()
+        self.__save_conf_matrix(conf_matrix)
 
         if os.path.exists(self.out_path):
             with open(self.out_path, "r") as f:
@@ -217,7 +244,8 @@ class Evaluator():
 
 
     def __write_metrics_csv(self):
-        metrics = self.get_metrics()
+        metrics, conf_matrix = self.get_metrics()
+        self.__save_conf_matrix(conf_matrix)
 
         if os.path.exists(self.out_path):
             df = pd.read_csv(self.out_path)
@@ -265,10 +293,13 @@ if __name__ == "__main__":
                         help="Whether to print the progress.")
     parser.add_argument("--threshold", "-t", type=float, default=0.5,
                         help="Threshold to use for the evaluation.")
+    parser.add_argument("--dataset_name", "-n", type=str, default="unknown",
+                        help="Name of the dataset.")
 
 
     args = parser.parse_args()
 
     evaluator = Evaluator(args.model_path, args.dataset_path, args.out_path, args.method,
-                            args.column_1, args.column_2, args.verbose, threshold=args.threshold)
+                            args.column_1, args.column_2, args.verbose, threshold=args.threshold,
+                            dataset_name=args.dataset_name)
     evaluator.save_metrics()

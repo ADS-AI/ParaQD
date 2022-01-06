@@ -2,3 +2,4 @@ ParaQD/
 other/
 losses/
 train_biencoder_v*.py
+*.json
