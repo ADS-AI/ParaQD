@@ -209,7 +209,9 @@ class Evaluator():
         Saves the confusion matrix in a csv file.
         """
         if self.verbose: print("[INFO] Saving the confusion matrix...")
-        ax = sns.heatmap(conf_matrix, annot=True, cmap="YlGnBu")
+        # Convert numpy array of floats into a list of integers
+        conf_matrix = conf_matrix.astype(int).tolist()
+        ax = sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="YlGnBu")
 
         ax.set_title(f'{self.method}');
         ax.set_xlabel('Predicted Values')
