@@ -209,7 +209,7 @@ class Evaluator():
         Saves the confusion matrix in a csv file.
         """
         if self.verbose: print("[INFO] Saving the confusion matrix...")
-        ax = sns.heatmap(conf_matrix, annot=True)
+        ax = sns.heatmap(conf_matrix, annot=True, cmap="YlGnBu")
 
         ax.set_title(f'{self.method}');
         ax.set_xlabel('Predicted Values')
@@ -221,7 +221,7 @@ class Evaluator():
 
         directory = os.path.join(os.path.dirname(self.out_path), self.dataset_name)
         if not os.path.exists(directory): os.makedirs(directory)
-        out_path = os.path.join(directory, f"{self.method}.png")
+        out_path = os.path.join(directory, f"{self.method}.pdf")
         plt.savefig(out_path)
 
 
